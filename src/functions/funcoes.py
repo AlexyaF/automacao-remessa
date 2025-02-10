@@ -1,4 +1,10 @@
 from datetime import datetime, timedelta
+import src.sql.queries as sql
+import mysql.connector
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 def identificarCiclo():
     hoje = datetime.today()
@@ -13,3 +19,21 @@ def identificarCiclo():
     else:
         ciclo = int(input("Ciclo nao identificado, qual ciclo deseja processar: "))
     return ciclo
+
+def conexao_banco():
+    config = mysql.connector.connect(
+        host=os.getenv('HOST_OP'),
+        user=os.getenv('USER_OP'),
+        password=os.getenv('PASS_OP'),
+        database=os.getenv('DB_OP')   
+    )
+    
+    cursor = config.cursor()
+    return cursor
+
+
+def consulta_titularidade_ciclo2():
+    cursor = conexao_banco()
+    cursor.execute(sql.consulta_titularidade_elektro)
+    resultado = cursor.fetchall()
+    print(resultado)

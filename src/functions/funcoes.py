@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-import src.sql.queries as sql
+import sql.queries as sql
 import mysql.connector
 from dotenv import load_dotenv
 import os
@@ -23,19 +23,20 @@ def identificarCiclo():
 
 
 def conexao_banco():
-    config = mysql.connector.connect(
-        host=os.getenv('HOST_OP'),
-        user=os.getenv('USER_OP'),
-        password=os.getenv('PASS_OP'),
-        database=os.getenv('DB_OP')   
-    )
+    config = {
+        'host':os.getenv('HOST_OP'),
+        'user':os.getenv('USER_OP'),
+        'password':os.getenv('PASS_OP'),
+        'database':os.getenv('DB_OP')   
+    }
     
-    cursor = config.cursor()
-    return cursor
+    conexao = mysql.connector.connect(**config)
+    return conexao
 
 
 def consulta_titularidade_ciclo2():
-    cursor = conexao_banco()
+    conexao = conexao_banco()
+    cursor = conexao.cursor()
     cursor.execute(sql.consulta_titularidade)
     resultado = cursor.fetchall()
     print(resultado)

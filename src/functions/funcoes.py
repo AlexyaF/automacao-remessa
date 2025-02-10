@@ -6,6 +6,7 @@ import os
 
 load_dotenv()
 
+#Identifica o ciclo da remessa de acordo com a data que o executavel for acionado
 def identificarCiclo():
     hoje = datetime.today()
     ano_atual = datetime.now().year
@@ -19,6 +20,7 @@ def identificarCiclo():
     else:
         ciclo = int(input("Ciclo nao identificado, qual ciclo deseja processar: "))
     return ciclo
+
 
 def conexao_banco():
     config = mysql.connector.connect(
@@ -34,6 +36,6 @@ def conexao_banco():
 
 def consulta_titularidade_ciclo2():
     cursor = conexao_banco()
-    cursor.execute(sql.consulta_titularidade_elektro)
+    cursor.execute(sql.consulta_titularidade)
     resultado = cursor.fetchall()
     print(resultado)

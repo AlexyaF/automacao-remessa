@@ -22,26 +22,45 @@ def identificarCiclo():
     return ciclo
 
 
-def conexao_banco():
+def conexao_banco_op():
     config = {
-        'host':os.getenv('HOST_OP'),
-        'user':os.getenv('USER_OP'),
-        'password':os.getenv('PASS_OP'),
-        'database':os.getenv('DB_OP')   
+        'host':os.getenv('DB_exemplo'),
+        'user':os.getenv('DB_exemplo'),
+        'password':os.getenv('DB_exemplo'),
+        'database':os.getenv('DB_exemplo')   
     }
     
     conexao = mysql.connector.connect(**config)
     return conexao
 
 
-def consulta_titularidade_ciclo2():
-    conexao = conexao_banco()
-    cursor = conexao.cursor()
-    cursor.execute(sql.consulta_titularidade)
-    resultado = cursor.fetchall()
-    resultado_valores = [str(item[0]) for item in resultado]
-    resultado_final = ", ".join(resultado_valores)
-    cursor.execute(sql.consulta_op, (resultado_final,))
+def conexao_exemplo():
+    config = {
+        'host':os.getenv('DB_exemplo'),
+        'user':os.getenv('DB_exemplo'),
+        'password':os.getenv('DB_exemplo'),
+        'database':os.getenv('DB_exemplo')   
+    }
 
-    resultado_op = cursor.fetchall()
-    print(resultado_op)
+    conexao = mysql.connector.connect(**config)
+    return conexao
+
+
+
+def consulta_titularidade_ciclo2():
+    #1° conexao
+    conexao_op = conexao_banco_op()
+    cursor_op = conexao_op.cursor()
+    cursor_op.execute(sql.consulta_titularidade)
+    uc = cursor_op.fetchall()
+
+    #Formatando para lista
+    uc_valores = [str(item[0]) for item in uc]
+    ucs_final = ", ".join(uc_valores)
+
+    #2° conexao
+    conexao_exemplo = conexao_exemplo()
+    cursor_exemplo = conexao_exemplo.cursor()
+    cursor_exemplo.execute(sql.consulta_op, (ucs_final,))
+    op = cursor_exemplo.fetchall()
+    print(op)

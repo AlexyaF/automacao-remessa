@@ -24,10 +24,10 @@ def identificarCiclo():
 
 def conexao_banco_op():
     config = {
-        'host':os.getenv('DB_exemplo'),
-        'user':os.getenv('DB_exemplo'),
-        'password':os.getenv('DB_exemplo'),
-        'database':os.getenv('DB_exemplo')   
+        'host':os.getenv('HOST_OP'),
+        'user':os.getenv('USER_OP'),
+        'password':os.getenv('PASS_OP'),
+        'database':os.getenv('DB_OP')   
     }
     
     conexao = mysql.connector.connect(**config)
@@ -36,10 +36,10 @@ def conexao_banco_op():
 
 def conexao_exemplo():
     config = {
-        'host':os.getenv('DB_exemplo'),
-        'user':os.getenv('DB_exemplo'),
-        'password':os.getenv('DB_exemplo'),
-        'database':os.getenv('DB_exemplo')   
+        'host':os.getenv('HOST_RBM'),
+        'user':os.getenv('USER_RBM'),
+        'password':os.getenv('PASS_RBM'),
+        'database':os.getenv('DB_RBM')   
     }
 
     conexao = mysql.connector.connect(**config)

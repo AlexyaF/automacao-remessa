@@ -39,4 +39,9 @@ def consulta_titularidade_ciclo2():
     cursor = conexao.cursor()
     cursor.execute(sql.consulta_titularidade)
     resultado = cursor.fetchall()
-    print(resultado)
+    resultado_valores = [str(item[0]) for item in resultado]
+    resultado_final = ", ".join(resultado_valores)
+    cursor.execute(sql.consulta_op, (resultado_final,))
+
+    resultado_op = cursor.fetchall()
+    print(resultado_op)

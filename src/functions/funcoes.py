@@ -29,21 +29,32 @@ def conexao_banco_op():
         'password':os.getenv('PASS_OP'),
         'database':os.getenv('DB_OP')   
     }
-    
-    conexao = mysql.connector.connect(**config)
-    return conexao
+    try:
+        conexao = mysql.connector.connect(**config)
+        return conexao
+    except mysql.connector.Error as err:
+        print(f"Erro ao conectar ao banco de dados: {err}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
 
 
-def conexao_exemplo():
+def conexao_banco_rbm():
     config = {
         'host':os.getenv('HOST_RBM'),
         'user':os.getenv('USER_RBM'),
         'password':os.getenv('PASS_RBM'),
-        'database':os.getenv('DB_RBM')   
+        'database':os.getenv('DB_RBM'),
+        'port':os.getenv('PORT_RBM')
     }
 
-    conexao = mysql.connector.connect(**config)
-    return conexao
+    try:
+        conexao = mysql.connector.connect(**config)
+        print('conexão estabelecida')
+        return conexao
+    except mysql.connector.Error as err:
+        print(f"Erro ao conectar ao banco de dados: {err}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
 
 
 
@@ -56,11 +67,16 @@ def consulta_titularidade_ciclo2():
 
     #Formatando para lista
     uc_valores = [str(item[0]) for item in uc]
-    ucs_final = ", ".join(uc_valores)
+    print(uc_valores)
+    # Criando os placeholders dinamicamente
+    placeholders = ', '.join(['%s'] * len(uc_valores)) # Exemplo: "%s, %s, %s"
+    # Substituindo no SQL
+    query = sql.consulta_op.replace("IN (%s)", f"IN ({placeholders})")
+
 
     #2° conexao
-    conexao_exemplo = conexao_exemplo()
-    cursor_exemplo = conexao_exemplo.cursor()
-    cursor_exemplo.execute(sql.consulta_op, (ucs_final,))
-    op = cursor_exemplo.fetchall()
+    conexao_rbm = conexao_banco_rbm()
+    cursor_rbm = conexao_rbm.cursor()
+    cursor_rbm.execute(query, tuple(uc_valores))
+    op = cursor_rbm.fetchall()
     print(op)

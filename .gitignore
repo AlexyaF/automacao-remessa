@@ -1,4 +1,5 @@
 sql/
 .env
 *.pyc
-teste.ipnyb
+teste.ipynb
+.git/

@@ -3,3 +3,4 @@ sql/
 *.pyc
 teste.ipynb
 .git/
+.gitattributes

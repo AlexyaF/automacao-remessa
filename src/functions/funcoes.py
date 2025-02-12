@@ -79,4 +79,5 @@ def consulta_titularidade_ciclo2():
     cursor_rbm = conexao_rbm.cursor()
     cursor_rbm.execute(query, tuple(uc_valores))
     op = cursor_rbm.fetchall()
+    print(op)
    

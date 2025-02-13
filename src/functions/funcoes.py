@@ -40,7 +40,7 @@ def conexao_banco_op():
 
 def conexao_banco_rbm():
     config = {
-        'host':os.getenv('HOST_RBM'),
+        'host':os.getenv('EX_HOST'),
         'user':os.getenv('USER_RBM'),
         'password':os.getenv('PASS_RBM'),
         'database':os.getenv('DB_RBM'),

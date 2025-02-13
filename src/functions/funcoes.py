@@ -40,7 +40,7 @@ def conexao_banco_op():
 
 def conexao_banco_rbm():
     config = {
-        'host':os.getenv('HOST_RBM'),
+        'host':os.getenv('EX'),
         'user':os.getenv('USER_RBM'),
         'password':os.getenv('PASS_RBM'),
         'database':os.getenv('DB_RBM'),
@@ -79,4 +79,5 @@ def consulta_titularidade_ciclo2():
     cursor_rbm = conexao_rbm.cursor()
     cursor_rbm.execute(query, tuple(uc_valores))
     op = cursor_rbm.fetchall()
+    print(op)
    

@@ -1,9 +1,13 @@
 from datetime import datetime, timedelta
-import sql.queries as sql
+import pandas as pd
 import mysql.connector
 from dotenv import load_dotenv
 import os
+import requests
+import json
+from sql.queries import * 
 
+# Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
 #Identifica o ciclo da remessa de acordo com a data que o executavel for acionado
@@ -31,7 +35,9 @@ def conexao_banco_op():
     }
     try:
         conexao = mysql.connector.connect(**config)
-        return conexao
+        if conexao.is_connected():
+            print("Conexão bem-sucedida!")
+            return conexao
     except mysql.connector.Error as err:
         print(f"Erro ao conectar ao banco de dados: {err}")
     except Exception as e:
@@ -49,33 +55,59 @@ def conexao_banco_rbm():
 
     try:
         conexao = mysql.connector.connect(**config)
-        print('conexão estabelecida')
-        return conexao
+        if conexao.is_connected():
+            print("Conexão bem-sucedida!")
+            return conexao
     except mysql.connector.Error as err:
         print(f"Erro ao conectar ao banco de dados: {err}")
     except Exception as e:
         print(f"Erro inesperado: {e}")
 
 
-
+# O ciclo dois conta com uma validação a mais por isso consulta casos especificos em uma query anterior a query principal
 def consulta_titularidade_ciclo2():
+    data_atual = datetime.now().strftime("%d-%m-%y")
     #1° conexao
     conexao_op = conexao_banco_op()
     cursor_op = conexao_op.cursor()
-    cursor_op.execute(sql.consulta_titularidade)
+    cursor_op.execute(consulta_titularidade) #conusltando apenas casos especificos 
     uc = cursor_op.fetchall()
 
     #Formatando para lista
     uc_valores = [str(item[0]) for item in uc]
-    print(uc_valores)
     # Criando os placeholders dinamicamente
     placeholders = ', '.join(['%s'] * len(uc_valores)) # Exemplo: "%s, %s, %s"
     # Substituindo no SQL
-    query = sql.consulta_op.replace("IN (%s)", f"IN ({placeholders})")
-
+    query = consulta_op.replace("IN (%s)", f"IN ({placeholders})")
 
     #2° conexao
     conexao_rbm = conexao_banco_rbm()
     cursor_rbm = conexao_rbm.cursor()
     cursor_rbm.execute(query, tuple(uc_valores))
-    op = cursor_rbm.fetchall()
+    bloquear75 = cursor_rbm.fetchall()
+    colunas = ['Unidade Consumidora', 'Operacao', 'Cia','Motivo' ]
+    df = pd.DataFrame(bloquear75, columns= colunas)
+    path = r'\\10.44.250.4\M-Energia\Colaboradores\Alexya Silva\Scripts\RemessaNeo\arquivoBloqueio'
+    nomeArquivo = ("CodMotivo75." + data_atual + ".csv") 
+    allpath = os.path.join(path, nomeArquivo)
+    df.to_csv(allpath, sep=";", index=False)
+
+
+def get_token_api_cancelamento():
+    url='https://api2-homolog.crefaz.com.br/tokenSistemaTerceiros'
+    body = {
+        'usuario':'T.Sistema',
+        'senha':'teste'
+    }
+
+    body_str = json.dumps(body)
+    print(body_str)
+
+    response = requests.post(url=url, data=body_str)
+    print(response)
+    if response.status_code == 200:
+        response = response.json()
+        token = response.get('jwt')
+        return token
+    else:
+        print('Erro')

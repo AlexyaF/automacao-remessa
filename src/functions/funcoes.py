@@ -17,12 +17,12 @@ def identificarCiclo():
     mes_atual = datetime.now().month
     data_fim_ciclo1 = datetime(ano_atual,mes_atual,6)
     data_fim_ciclo2= datetime(ano_atual,mes_atual,21)
-    if data_fim_ciclo1 <= hoje <= (data_fim_ciclo1 + timedelta(days=5)):
+    if data_fim_ciclo1 <= hoje <= (data_fim_ciclo1 + timedelta(days=5)): #Data de hoje entre dia 6 e 11
         ciclo = 1
-    elif data_fim_ciclo2 <= hoje <= (data_fim_ciclo2 + timedelta(days=5)):
+    elif data_fim_ciclo2 <= hoje <= (data_fim_ciclo2 + timedelta(days=5)): #Data de hoje entre dia 21 e 26
         ciclo = 2
     else:
-        ciclo = int(input("Ciclo nao identificado, qual ciclo deseja processar: "))
+        ciclo = int(input("Você esta executando o script fora da data de envio!!!\nCiclo não identificado, qual ciclo deseja processar: "))
     return ciclo
 
 
@@ -66,8 +66,7 @@ def conexao_banco_rbm():
 
 # O ciclo dois conta com uma validação a mais por isso consulta casos especificos em uma query anterior a query principal
 def consulta_titularidade_ciclo2():
-    data_atual = datetime.now().strftime("%d-%m-%y")
-    #1° conexao
+    #1° conexao banco energia
     conexao_op = conexao_banco_op()
     cursor_op = conexao_op.cursor()
     cursor_op.execute(consulta_titularidade) #conusltando apenas casos especificos 
@@ -80,20 +79,27 @@ def consulta_titularidade_ciclo2():
     # Substituindo no SQL
     query = consulta_op.replace("IN (%s)", f"IN ({placeholders})")
 
-    #2° conexao
+    #2° conexao rbm
     conexao_rbm = conexao_banco_rbm()
     cursor_rbm = conexao_rbm.cursor()
     cursor_rbm.execute(query, tuple(uc_valores))
     bloquear75 = cursor_rbm.fetchall()
-    colunas = ['Unidade Consumidora', 'Operacao', 'Cia','Motivo' ]
-    df = pd.DataFrame(bloquear75, columns= colunas)
-    path = r'\\10.44.250.4\M-Energia\Colaboradores\Alexya Silva\Scripts\RemessaNeo\arquivoBloqueio'
-    nomeArquivo = ("CodMotivo75." + data_atual + ".csv") 
-    allpath = os.path.join(path, nomeArquivo)
-    df.to_csv(allpath, sep=";", index=False)
+    #criando lista para salvar casos
+    motivo75 = []
+    for op in bloquear75:
+        body = {
+            'uc':f'{op[0]}',
+            'operacao':f'{op[1]}',
+            'ciaEletrica':op[2],
+            'ciaEletricaComboBox':op[2],
+            'motivo':'75'
+        }
+        motivo75.append(body)
+
+    return motivo75
 
 
-def get_token_api_cancelamento():
+def get_token_header():
     url='https://api2-homolog.crefaz.com.br/tokenSistemaTerceiros'
     body = {
         'usuario':'T.Sistema',
@@ -102,12 +108,26 @@ def get_token_api_cancelamento():
 
     body_str = json.dumps(body)
     print(body_str)
-
-    response = requests.post(url=url, data=body_str)
-    print(response)
-    if response.status_code == 200:
-        response = response.json()
-        token = response.get('jwt')
-        return token
-    else:
-        print('Erro')
+    try:
+        response = requests.post(url=url, data=body_str)
+        print(response)
+        if response.status_code == 200:
+            response = response.json()
+            token = response.get('jwt')
+            headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json" 
+            }
+            return headers
+        else:
+            print('Erro. Status code:', response.status_code)
+    except requests.ConnectionError:
+        print("Erro de conexão: Não foi possível conectar à API.")
+    except requests.Timeout:
+        print("Erro de timeout: A requisição demorou muito.")
+    except requests.HTTPError as http_err:
+        print(f"Erro HTTP {http_err.response.status_code}: {http_err.response.text}")
+    except requests.RequestException as err:
+        print(f"Erro na requisição: {err}")
+    except Exception as err:
+        print(f"Erro inesperado: {err}")

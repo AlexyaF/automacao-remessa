@@ -36,7 +36,6 @@ def conexao_banco_op():
     try:
         conexao = mysql.connector.connect(**config)
         if conexao.is_connected():
-            print("Conexão bem-sucedida!")
             return conexao
     except mysql.connector.Error as err:
         print(f"Erro ao conectar ao banco de dados: {err}")
@@ -56,7 +55,6 @@ def conexao_banco_rbm():
     try:
         conexao = mysql.connector.connect(**config)
         if conexao.is_connected():
-            print("Conexão bem-sucedida!")
             return conexao
     except mysql.connector.Error as err:
         print(f"Erro ao conectar ao banco de dados: {err}")
@@ -100,14 +98,13 @@ def consulta_titularidade_ciclo2():
 
 
 def get_token_header():
-    url='https://api2-homolog.crefaz.com.br/tokenSistemaTerceiros'
+    url='https://api2.crefaz.com.br/tokenSistemaTerceiros'
     body = {
-        'usuario':'T.Sistema',
-        'senha':'teste'
+        'usuario':os.getenv('user'),
+        'senha':os.getenv('pass')
     }
 
     body_str = json.dumps(body)
-    print(body_str)
     try:
         response = requests.post(url=url, data=body_str)
         print(response)
@@ -131,3 +128,12 @@ def get_token_header():
         print(f"Erro na requisição: {err}")
     except Exception as err:
         print(f"Erro inesperado: {err}")
+
+
+def envio_cancelamento(motivo):
+    body = json.dumps(motivo)
+    print(body)
+    url = 'https://api2.crefaz.com.br/sistema/cobranca/bloquearUcLote'
+    header = get_token_header()
+    response = requests.post(url=url, headers=header, data=body)
+    print(response)

@@ -151,11 +151,8 @@ def envio_cancelamento(motivo):
     body = json.dumps(motivo)
     url = 'https://api2.crefaz.com.br/sistema/cobranca/bloquearUcLote'
     header = get_token_header()
-    response = requests.post(url=url, headers=header, data=body)
 
-    #validando retorno
-    if response.status_code == 200:
-        response = response.json()
+    def processar_retorno(response):
         if 'mensagemErro' in response: #se mensagem de erro pegar a operação com erro
             for item in response.get("tabelaLote", []):
                 resposta = {
@@ -164,15 +161,12 @@ def envio_cancelamento(motivo):
                 'historico' : item.get("historico")
                 }
                 erro.append(resposta)
-
                 #pegar diferença de casos cancelados e casos enviados
                 op_com_erro.append(item.get("operacao"))
-
             op_sucesso = list(set(op_solicitada) - set(op_com_erro))
             print('DIFF:', op_sucesso)
-            dados_com_sucesso = [item for item in solicitado if item['operacao'] in op_sucesso] #puxar dados de solicitado só se ele estiver nas operacoes que nao deram erro
+            dados_com_sucesso = [item for item in solicitado if item['operacao'] in op_sucesso] #puxar dados de solicitadosó se ele estiver nas operacoes que nao deram erro
             sucesso.append(dados_com_sucesso)
-
         else:
             retorno = response.get('retorno') 
             if retorno == 'sucesso': # se retorno sucesso
@@ -180,5 +174,24 @@ def envio_cancelamento(motivo):
             else:
                 retorno = response.get('retorno')
                 print('Retorno:', retorno, 'verificar casos enviados')
+
+    try:
+        response = requests.post(url=url, headers=header, data=body)
+        #validando retorno
+        if response.status_code == 200:
+            response = response.json()
+            processar_retorno(response)
+        elif response.status_code == 400:
+            header = get_token_header() #buscar novo token 
+            response = requests.post(url=url, headers=header, data=body)
+            if response.status_code == 200:
+                response = response.json()
+                processar_retorno(response)
+        else:
+            print('ERRO ENVIO CASOS:', response.status_code)
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao enviar requisição: {e}")
+
+
     print('SUCESSO:', sucesso)
     print('ERRO:', erro)

@@ -131,9 +131,54 @@ def get_token_header():
 
 
 def envio_cancelamento(motivo):
+    op_solicitada = [] #lista das operacoes enviadas
+    op_com_erro=[] #lista op com erros
+    solicitado = [] #lista cosos enviados que vao direto para sucesso
+
+    for op in motivo:
+        op_solicitada.append(op['operacao']) #apenas op
+        op_geral = { #op, uc, e retorno ja que quando da sucesso nao retorna por operacao
+            'operacao' : op.get("operacao"),
+            'uc' : op.get("uc"),
+            'historico' : 'UC bloqueada!'
+            }
+        solicitado.append(op_geral)
+        
+    sucesso = []
+    erro = []
+
+    #Configurações de request e request
     body = json.dumps(motivo)
-    print(body)
     url = 'https://api2.crefaz.com.br/sistema/cobranca/bloquearUcLote'
     header = get_token_header()
     response = requests.post(url=url, headers=header, data=body)
-    print(response)
+
+    #validando retorno
+    if response.status_code == 200:
+        response = response.json()
+        if 'mensagemErro' in response: #se mensagem de erro pegar a operação com erro
+            for item in response.get("tabelaLote", []):
+                resposta = {
+                'operacao' : item.get("operacao"),
+                'uc' : item.get("uc"),
+                'historico' : item.get("historico")
+                }
+                erro.append(resposta)
+
+                #pegar diferença de casos cancelados e casos enviados
+                op_com_erro.append(item.get("operacao"))
+
+            op_sucesso = list(set(op_solicitada) - set(op_com_erro))
+            print('DIFF:', op_sucesso)
+            dados_com_sucesso = [item for item in solicitado if item['operacao'] in op_sucesso] #puxar dados de solicitado só se ele estiver nas operacoes que nao deram erro
+            sucesso.append(dados_com_sucesso)
+
+        else:
+            retorno = response.get('retorno') 
+            if retorno == 'sucesso': # se retorno sucesso
+                sucesso.append(solicitado) #pega os casos listados, como sucesso nao retorna caso a caso, pegar todos
+            else:
+                retorno = response.get('retorno')
+                print('Retorno:', retorno, 'verificar casos enviados')
+    print('SUCESSO:', sucesso)
+    print('ERRO:', erro)

@@ -1,6 +1,6 @@
 import functions.funcoes as f
 
-ciclo = f.identificarCiclo()
+ciclo = 2
 print(ciclo)
 if ciclo == 2:
     motivo75 = f.consulta_titularidade_ciclo2()

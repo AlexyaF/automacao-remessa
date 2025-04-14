@@ -183,7 +183,7 @@ def envio_cancelamento(motivo):
                 'request': body_correspondente,
                 'historico' : item.get("historico")
                 }
-                
+
                 erro.append(resposta)
                 #pegar diferença de casos cancelados e casos enviados
                 op_com_erro.append(item.get("operacao"))
@@ -233,4 +233,4 @@ def inserir_banco(dados, fonte):
         for op in dados:
             op = op[0]
             insert = 'INSERT INTO envio_log_bloqueio (uc, operacao, request, response, dt_envio) VALUES (%s, %s, %s, %s, %s)'
-            valores = (op['uc'], op['operacao'], op[''])
+            valores = (op['uc'], op['operacao'], op['request'], op['historico'], data_atual)

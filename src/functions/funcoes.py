@@ -10,6 +10,9 @@ from sql.queries import *
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
+def data_hora_atual():
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 #Identifica o ciclo da remessa de acordo com a data que o executavel for acionado
 def identificarCiclo():
     hoje = datetime.today()
@@ -205,3 +208,16 @@ def envio_cancelamento(motivo):
 
     print('SUCESSO:', sucesso)
     print('ERRO:', erro)
+
+def inserir_banco(dados, fonte):
+    conexao = conexao_banco_op()
+    cursor = conexao.cursor()
+    data_atual = data_hora_atual()
+    if fonte == 'S':
+        for op in dados:
+            op = op[0]
+            insert = "INSERT INTO solicitacao_bloqueio (uc, operacao, motivo, cia, dt_solicitação) VALUES (%s, %s, %s, %s, %s)"
+            valores = (op['uc'], op['operacao'], op['ciaEletrica'], op['motivo'], data_atual)
+            cursor.execute(insert, valores)
+    #elif fonte == 'L':
+        

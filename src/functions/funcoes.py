@@ -84,6 +84,7 @@ def consulta_titularidade_ciclo2():
     bloquear75 = cursor_rbm.fetchall()
     #criando lista para salvar casos
     motivo75 = []
+    solicitacao=[]
     for op in bloquear75:
         body = {
             'uc':f'{op[0]}',
@@ -93,6 +94,15 @@ def consulta_titularidade_ciclo2():
             'motivo':'75'
         }
         motivo75.append(body)
+        #dados inseridos na tabela de solicitação
+        dados = {
+            'uc':f'{op[0]}',
+            'operacao':f'{op[1]}',
+            'ciaEletrica':op[2],
+            'motivo':'Rotina conuslta titularidade ELEKTRO'
+        }
+        solicitacao.append(dados)
+    #inserir_banco(dados, fonte)
 
     return motivo75
 

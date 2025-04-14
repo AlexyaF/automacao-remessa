@@ -105,7 +105,7 @@ def consulta_titularidade_ciclo2():
             'motivo':'Rotina conuslta titularidade ELEKTRO'
         }
         solicitacao.append(dados)
-    #inserir_banco(dados, fonte)
+    #inserir_banco(dados, "S")
 
     return motivo75
 
@@ -144,19 +144,22 @@ def get_token_header():
 
 
 def envio_cancelamento(motivo):
-    op_solicitada = [] #lista das operacoes enviadas
-    op_com_erro=[] #lista op com erros
+    op_solicitada = [] #lista somente de operacoes enviadas
+    op_com_erro=[] #lista casos com erros
     solicitado = [] #lista cosos enviados que vao direto para sucesso
 
     for op in motivo:
+        #Dados de comparação - oq foi enviado X oq deu erro
         op_solicitada.append(op['operacao']) #apenas op
+        body = json.dumps(op)
         op_geral = { #op, uc, e retorno ja que quando da sucesso nao retorna por operacao
             'operacao' : op.get("operacao"),
             'uc' : op.get("uc"),
-            'historico' : 'UC bloqueada!'
+            'request':body,
+            'historico' : 'UC bloqueada com sucesso'
             }
         solicitado.append(op_geral)
-        
+
     sucesso = []
     erro = []
 
@@ -168,17 +171,24 @@ def envio_cancelamento(motivo):
     def processar_retorno(response):
         if 'mensagemErro' in response: #se mensagem de erro pegar a operação com erro
             for item in response.get("tabelaLote", []):
+                #buscar request em solicitados 
+                body_correspondente = next(
+                (s['request'] for s in solicitado if s['operacao'] == item.get("operacao")),
+                None  # valor padrão se não encontrar
+                )
+
                 resposta = {
                 'operacao' : item.get("operacao"),
                 'uc' : item.get("uc"),
+                'request': body_correspondente,
                 'historico' : item.get("historico")
                 }
+                
                 erro.append(resposta)
                 #pegar diferença de casos cancelados e casos enviados
                 op_com_erro.append(item.get("operacao"))
             op_sucesso = list(set(op_solicitada) - set(op_com_erro))
-            print('DIFF:', op_sucesso)
-            dados_com_sucesso = [item for item in solicitado if item['operacao'] in op_sucesso] #puxar dados de solicitadosó se ele estiver nas operacoes que nao deram erro
+            dados_com_sucesso = [item for item in solicitado if item['operacao'] in op_sucesso] #puxar dados de solicitado só se ele estiver nas operacoes que deram erro
             sucesso.append(dados_com_sucesso)
         else:
             retorno = response.get('retorno') 
@@ -216,8 +226,11 @@ def inserir_banco(dados, fonte):
     if fonte == 'S':
         for op in dados:
             op = op[0]
-            insert = "INSERT INTO solicitacao_bloqueio (uc, operacao, motivo, cia, dt_solicitação) VALUES (%s, %s, %s, %s, %s)"
+            insert = 'INSERT INTO solicitacao_bloqueio (uc, operacao, motivo, cia, dt_solicitação) VALUES (%s, %s, %s, %s, %s)'
             valores = (op['uc'], op['operacao'], op['ciaEletrica'], op['motivo'], data_atual)
             cursor.execute(insert, valores)
-    #elif fonte == 'L':
-        
+    elif fonte == 'L':
+        for op in dados:
+            op = op[0]
+            insert = 'INSERT INTO envio_log_bloqueio (uc, operacao, request, response, dt_envio) VALUES (%s, %s, %s, %s, %s)'
+            valores = (op['uc'], op['operacao'], op[''])

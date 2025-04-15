@@ -85,9 +85,11 @@ def consulta_titularidade_ciclo2():
     cursor_rbm = conexao_rbm.cursor()
     cursor_rbm.execute(query, tuple(uc_valores))
     bloquear75 = cursor_rbm.fetchall()
+
     #criando lista para salvar casos
-    motivo75 = []
-    solicitacao=[]
+    motivo75 = [] #casos de envio no request
+    solicitacao=[] #casos para inserir no banco
+    print('QUANTIDADE DE OPERAÇÕES PARA BLOQUEAR:', len(bloquear75))
     for op in bloquear75:
         body = {
             'uc':f'{op[0]}',
@@ -105,7 +107,9 @@ def consulta_titularidade_ciclo2():
             'motivo':'Rotina conuslta titularidade ELEKTRO'
         }
         solicitacao.append(dados)
-    #inserir_banco(dados, "S")
+
+    print('QTD OPERACOES SOLICITADAS BLOQUEIO:', len(solicitacao))
+    inserir_banco(solicitacao, 'S')
 
     return motivo75
 
@@ -120,7 +124,6 @@ def get_token_header():
     body_str = json.dumps(body)
     try:
         response = requests.post(url=url, data=body_str)
-        print(response)
         if response.status_code == 200:
             response = response.json()
             token = response.get('jwt')
@@ -145,7 +148,7 @@ def get_token_header():
 
 def envio_cancelamento(motivo):
     op_solicitada = [] #lista somente de operacoes enviadas
-    op_com_erro=[] #lista casos com erros
+    op_com_erro=[] #lista somente de operacoes com erros
     solicitado = [] #lista cosos enviados que vao direto para sucesso
 
     for op in motivo:
@@ -159,7 +162,7 @@ def envio_cancelamento(motivo):
             'historico' : 'UC bloqueada com sucesso'
             }
         solicitado.append(op_geral)
-
+    
     sucesso = []
     erro = []
 
@@ -215,22 +218,24 @@ def envio_cancelamento(motivo):
     except requests.exceptions.RequestException as e:
         print(f"Erro ao enviar requisição: {e}")
 
+    print(f'SUCESSO {len(sucesso)}')
+    print(f'ERRO {len(erro)}:')
 
-    print('SUCESSO:', sucesso)
-    print('ERRO:', erro)
 
 def inserir_banco(dados, fonte):
+    print('======INSERINDO NO BANCO======')
     conexao = conexao_banco_op()
     cursor = conexao.cursor()
     data_atual = data_hora_atual()
+    print(f'QTD DE DADOS PARA INSERIR: {len(dados)}')
     if fonte == 'S':
         for op in dados:
-            op = op[0]
-            insert = 'INSERT INTO solicitacao_bloqueio (uc, operacao, motivo, cia, dt_solicitação) VALUES (%s, %s, %s, %s, %s)'
+            insert = 'INSERT INTO solicitacao_bloqueio (uc, operacao, motivo, cia, dt_solicitacao) VALUES (%s, %s, %s, %s, %s)'
             valores = (op['uc'], op['operacao'], op['ciaEletrica'], op['motivo'], data_atual)
             cursor.execute(insert, valores)
-    elif fonte == 'L':
-        for op in dados:
-            op = op[0]
-            insert = 'INSERT INTO envio_log_bloqueio (uc, operacao, request, response, dt_envio) VALUES (%s, %s, %s, %s, %s)'
-            valores = (op['uc'], op['operacao'], op['request'], op['historico'], data_atual)
+            conexao.commit()
+    # elif fonte == 'L':
+    #     for op in dados:
+    #         op = op[0]
+    #         insert = 'INSERT INTO envio_log_bloqueio (uc, operacao, request, response, dt_envio) VALUES (%s, %s, %s, %s, %s)'
+    #         valores = (op['uc'], op['operacao'], op['request'], op['historico'], data_atual)

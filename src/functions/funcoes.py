@@ -89,7 +89,7 @@ def consulta_titularidade_ciclo2():
     #criando lista para salvar casos
     motivo75 = [] #casos de envio no request
     solicitacao=[] #casos para inserir no banco
-    print('QUANTIDADE DE OPERAÇÕES PARA BLOQUEAR:', len(bloquear75))
+    print('QUANTIDADE DE OPERAÇÕES QUE NAO CONFIRMARAM TITULARIDADE:', len(bloquear75))
     for op in bloquear75:
         body = {
             'uc':f'{op[0]}',
@@ -104,12 +104,14 @@ def consulta_titularidade_ciclo2():
             'uc':f'{op[0]}',
             'operacao':f'{op[1]}',
             'ciaEletrica':op[2],
-            'motivo':'Rotina conuslta titularidade ELEKTRO'
+            'motivo':'Rotina consulta titularidade ELEKTRO'
         }
         solicitacao.append(dados)
 
     print('QTD OPERACOES SOLICITADAS BLOQUEIO:', len(solicitacao))
-    inserir_banco(solicitacao, 'S')
+
+    if solicitacao:
+        inserir_banco(solicitacao, 'S')
 
     return motivo75
 
@@ -149,7 +151,8 @@ def get_token_header():
 def envio_cancelamento(motivo):
     op_solicitada = [] #lista somente de operacoes enviadas
     op_com_erro=[] #lista somente de operacoes com erros
-    solicitado = [] #lista cosos enviados que vao direto para sucesso
+    sucesso = [] #lista cosos enviados que vao direto para sucesso
+    erro = [] #lista cosos enviados que recebem mensagem de erro
 
     for op in motivo:
         #Dados de comparação - oq foi enviado X oq deu erro
@@ -161,10 +164,7 @@ def envio_cancelamento(motivo):
             'request':body,
             'historico' : 'UC bloqueada com sucesso'
             }
-        solicitado.append(op_geral)
-    
-    sucesso = []
-    erro = []
+        sucesso.append(op_geral)
 
     #Configurações de request e request
     body = json.dumps(motivo)
@@ -172,11 +172,13 @@ def envio_cancelamento(motivo):
     header = get_token_header()
 
     def processar_retorno(response):
+        nonlocal sucesso, erro  # permite alterar as listas do escopo externo
         if 'mensagemErro' in response: #se mensagem de erro pegar a operação com erro
+            print('RETORNO DE ERRO')
             for item in response.get("tabelaLote", []):
                 #buscar request em solicitados 
                 body_correspondente = next(
-                (s['request'] for s in solicitado if s['operacao'] == item.get("operacao")),
+                (s['request'] for s in sucesso if s['operacao'] == item.get("operacao")),
                 None  # valor padrão se não encontrar
                 )
 
@@ -188,18 +190,22 @@ def envio_cancelamento(motivo):
                 }
 
                 erro.append(resposta)
-                #pegar diferença de casos cancelados e casos enviados
                 op_com_erro.append(item.get("operacao"))
+
+            #pegar diferença de casos cancelados e casos enviados
             op_sucesso = list(set(op_solicitada) - set(op_com_erro))
-            dados_com_sucesso = [item for item in solicitado if item['operacao'] in op_sucesso] #puxar dados de solicitado só se ele estiver nas operacoes que deram erro
-            sucesso.append(dados_com_sucesso)
+            dados_com_sucesso = [item for item in sucesso if item['operacao'] in op_sucesso] #puxar dados de solicitado só se ele estiver nas operacoes que deram erro
+            sucesso.clear()  # zerar a lista e acrescentar somente casos que nao deram erro
+            sucesso.extend(dados_com_sucesso) #adiciona os itens individualmente
         else:
+            print('RETORNO DE SUCESSO')
             retorno = response.get('retorno') 
             if retorno == 'sucesso': # se retorno sucesso
-                sucesso.append(solicitado) #pega os casos listados, como sucesso nao retorna caso a caso, pegar todos
+                sucesso = sucesso #pega todos os casos, como sucesso nao retorna caso a caso, pegar todos.
             else:
                 retorno = response.get('retorno')
                 print('Retorno:', retorno, 'verificar casos enviados')
+
 
     try:
         response = requests.post(url=url, headers=header, data=body)
@@ -220,22 +226,32 @@ def envio_cancelamento(motivo):
 
     print(f'SUCESSO {len(sucesso)}')
     print(f'ERRO {len(erro)}:')
+    
+    if sucesso:
+        inserir_banco(sucesso, "L")
+
+    if erro:
+        inserir_banco(erro, "L")
+
 
 
 def inserir_banco(dados, fonte):
-    print('======INSERINDO NO BANCO======')
     conexao = conexao_banco_op()
     cursor = conexao.cursor()
     data_atual = data_hora_atual()
-    print(f'QTD DE DADOS PARA INSERIR: {len(dados)}')
     if fonte == 'S':
+        print('======INSERINDO NO BANCO SOLICITAÇÃO======')
         for op in dados:
-            insert = 'INSERT INTO solicitacao_bloqueio (uc, operacao, motivo, cia, dt_solicitacao) VALUES (%s, %s, %s, %s, %s)'
+            insert = 'INSERT INTO solicitacao_bloqueio (uc, operacao,cia, motivo, dt_solicitacao) VALUES (%s, %s, %s, %s, %s)'
             valores = (op['uc'], op['operacao'], op['ciaEletrica'], op['motivo'], data_atual)
             cursor.execute(insert, valores)
             conexao.commit()
-    # elif fonte == 'L':
-    #     for op in dados:
-    #         op = op[0]
-    #         insert = 'INSERT INTO envio_log_bloqueio (uc, operacao, request, response, dt_envio) VALUES (%s, %s, %s, %s, %s)'
-    #         valores = (op['uc'], op['operacao'], op['request'], op['historico'], data_atual)
+    elif fonte == 'L':
+        print('======INSERINDO NO BANCO ENVIO======')
+        for op in dados:
+            insert = 'INSERT INTO envio_log_bloqueio (uc, operacao, request, response, dt_envio) VALUES (%s, %s, %s, %s, %s)'
+            valores = (op['uc'], op['operacao'], op['request'], op['historico'], data_atual)
+            cursor.execute(insert, valores)
+            conexao.commit()
+    cursor.close()
+    conexao.close()
